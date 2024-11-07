@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container, Stage, Text } from "@pixi/react";
 import { Circle } from "@/components/Circle";
 import { TextStyle } from "pixi.js";
+import SettingsPanel from "@/components/SettingsPanel";
+import TaskManager from "./components/TaskManager";
 
 function App() {
   return (
@@ -30,18 +31,9 @@ function App() {
             </Container>
           </Stage>
           <Button className=" self-end">Run</Button>
-          <Card>
-            <CardContent>
-              <Button>Add Process</Button>
-            </CardContent>
-          </Card>
+          <SettingsPanel />
         </div>
-        <Card className="grow-1">
-          <CardHeader>
-            <CardTitle>Task Manager</CardTitle>
-          </CardHeader>
-          <CardContent>hi</CardContent>
-        </Card>
+        <TaskManager />
       </div>
     </main>
   );
