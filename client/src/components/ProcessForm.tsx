@@ -28,11 +28,13 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      size: 5,
+      size: 1,
       hasIO: false,
-      events: 0,
+      events: 1,
     },
   });
+
+  const isHasIOChecked = form.watch("hasIO");
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     addProcess(values.size, values.hasIO, values.events);
@@ -53,7 +55,7 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
                   id="process-size"
                   type="number"
                   placeholder="12"
-                  min={0}
+                  min={1}
                 />
               </FormControl>
               <FormDescription>The size of the process in KB.</FormDescription>
@@ -91,8 +93,9 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
                   {...field}
                   id="process-events"
                   type="number"
+                  disabled={!isHasIOChecked}
                   placeholder="2"
-                  min={0}
+                  min={1}
                   max={3}
                 />
               </FormControl>
