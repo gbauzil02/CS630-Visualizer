@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -8,14 +7,28 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "./ui/input";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
+import ProcessForm from "@/components/ProcessForm";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
+import { useProcessContext } from "@/contexts/ProcessContext";
 
 export type Process = {
   pid: string;
@@ -26,12 +39,17 @@ export type Process = {
   numOfEvents?: number;
 };
 
+const formSchema = z.object({
+  memorySize: z.coerce.number().positive().int().min(0),
+  timeSlice: z.coerce.number().positive().int().min(1).max(20),
+});
+
 export default function SettingsPanel() {
-  const [processes, setProcesses] = useState<Process[]>([]);
+  const { processes, setProcesses } = useProcessContext();
 
   function addProcess(size: number, hasIO: boolean, numOfEvents?: number) {
     const process: Process = {
-      pid: Math.random().toString(36).substring(7),
+      pid: String(processes.length + 1),
       size,
       hasIO,
       state: "New",
@@ -45,24 +63,62 @@ export default function SettingsPanel() {
     setProcesses([...processes, process]);
   }
 
-  async function loadSimulation() {
-    await fetch("http://localhost:3000/", {
+  async function loadSimulation(payload: {
+    processes: Process[];
+    timeSlice: number;
+    memorySize: number;
+  }) {
+    await fetch("http://localhost:3001/endpoint", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        processes,
-        timeSlice: 5,
-        memorySize: 64,
-      }),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      memorySize: 64,
+      timeSlice: 5,
+    },
+  });
+
+  const { toast } = useToast();
+
+  const handleSubmit = form.handleSubmit(
+    (values: z.infer<typeof formSchema>) => {
+      if (processes.length === 0) {
+        toast({
+          title: "Error",
+          description: "You must add at least one process!",
+          variant: "destructive",
+        });
+        return;
+      }
+      loadSimulation({ processes, ...values });
+      console.log({ processes, ...values });
+      toast({
+        title: "Success",
+        description: "Simulation loaded successfully!",
+      });
+    }
+  );
+
+  function reset() {
+    form.reset();
+    setProcesses([]);
+    toast({
+      title: "Success",
+      description: "Simulation values reset successfully!",
     });
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Settings</CardTitle>
+        <CardTitle className="uppercase">Settings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <section className="space-y-2">
@@ -82,20 +138,7 @@ export default function SettingsPanel() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent>
-                <div className="space-y-2">
-                  <div>
-                    <label htmlFor="process-size">Size:</label>
-                    <Input id="process-size" type="number" placeholder="12" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="process-io">Has I/O:</label>
-                    <Checkbox id="process-io" />
-                  </div>
-                  <div>
-                    <label htmlFor="process-events">Number of Events:</label>
-                    <Input id="process-events" type="number" placeholder="2" />
-                  </div>
-                </div>
+                <ProcessForm addProcess={addProcess} />
               </PopoverContent>
             </Popover>
           </div>
@@ -105,20 +148,61 @@ export default function SettingsPanel() {
           <h2 className="font-semibold text-xl uppercase">
             Simulation Settings
           </h2>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label htmlFor="time-slice">Time Slice:</label>
-              <Input id="time-slice" type="number" placeholder="5" />
-            </div>
-            <div>
-              <label htmlFor="memory-size">Memory Size:</label>
-              <Input id="memory-size" type="number" placeholder="64" />
-            </div>
-          </div>
+          <Form {...form}>
+            <form className="grid grid-cols-2 gap-2">
+              <FormField
+                control={form.control}
+                name="memorySize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="memory-size">Memory Size:</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        id="memory-size"
+                        type="number"
+                        placeholder="64"
+                        min={0}
+                        step={8}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The size of the memory in KB.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="timeSlice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="time-slice">Time Slice:</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        id="time-slice"
+                        type="number"
+                        placeholder="5"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The time slice in seconds.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
         </section>
       </CardContent>
-      <CardFooter>
-        <Button onClick={loadSimulation}>Load Simulation</Button>
+      <CardFooter className="flex gap-2 justify-end">
+        <Button onClick={handleSubmit}>Load Simulation</Button>
+        <Button onClick={reset} variant="destructive">
+          Reset
+        </Button>
       </CardFooter>
     </Card>
   );
