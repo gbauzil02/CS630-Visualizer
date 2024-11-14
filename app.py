@@ -380,7 +380,7 @@ def load():
     
     threads_proc = []
     for i in processes_input:
-        
+        processes.append(i)
         t = threading.Thread(target = run_task, args = (i,))
         threads_proc.append(t)
         t.start()
