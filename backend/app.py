@@ -291,7 +291,7 @@ def send_processes():
     with messanger:
         print("-----------------------------------------------")
         new_list = [{"pid": process["pid"], "ioStatus": process["ioStatus"], "state": process["state"]} for process in processes]
-        socketio.emit('processes', new_list)
+        socketio.emit("processes", new_list)
 
 def blocked(process, q):
     duration_options = [5,10,15]
@@ -376,8 +376,18 @@ def http_call():
 
 @app.route('/load', methods=['POST'])
 def load():
+    global memory_size
+    global time_slice
+
     data = request.json
     processes_input = data.get('processes')
+    mem_input = data.get('memorySize')
+    time_input = data.get('timeSlice')
+
+    memory_size = mem_input
+    time_slice = time_input
+
+    print(processes_input)
     
     
     # def run_task(process):
@@ -403,29 +413,6 @@ def load():
 
     return jsonify({"message": "Task started"}), 200
 
-
-@app.route('/start', methods=['GET'])
-def start():
-    print("in start")
-    print(processes)
-    # def run_task(process):
-    #     print("calling manager")
-    #     manager(process)
-
-    threads_proc = []
-    for i in processes:
-        print("starting 1")
-        t = threading.Thread(target = manager, args = (i,))
-        print("starting 2")
-        threads_proc.append(t)
-        print("starting 3")
-        t.start()
-
-    for queue in threads_proc:
-        queue.join()
-    return jsonify({"OK": True}), 200
- 
-
 @socketio.on('connect')
 def connect():
     print(request.sid)
@@ -433,6 +420,23 @@ def connect():
     emit("test", {
         "data":f"{request.sid} is connected"
     })
+
+@socketio.on('start')
+def start():
+    print("Memory size: {}".format(memory_size))
+    print("Time slice: {}".format(time_slice))
+    print(processes)
+
+    threads_proc = []
+    for i in processes:
+        t = threading.Thread(target = manager, args = (i,))
+        threads_proc.append(t)
+        t.start()
+
+    for queue in threads_proc:
+        queue.join()
+    return jsonify({"OK": True}), 200
+
     
 
 @socketio.on('disconnect')
