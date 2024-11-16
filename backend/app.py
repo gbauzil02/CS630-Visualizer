@@ -384,7 +384,8 @@ def load():
     #     manager(process)
     
     # threads_proc = []
-    global processes
+    global processes 
+    processes = []
     for i in processes_input:
         i["duration"] = random.randint(15,20)
         i["ioStatus"] = i["ioStatus"].upper()
