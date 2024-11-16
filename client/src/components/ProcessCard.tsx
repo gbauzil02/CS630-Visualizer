@@ -10,7 +10,7 @@ export default function ProcessCard({ process }: { process: Process }) {
       <CardContent>
         <ul>
           <li>State: {process.state}</li>
-          <li>IO Status: {process.IOStatus}</li>
+          <li>IO Status: {process.ioStatus}</li>
         </ul>
       </CardContent>
     </Card>
