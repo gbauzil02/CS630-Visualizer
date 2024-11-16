@@ -6,37 +6,21 @@ import SettingsPanel from "@/components/SettingsPanel";
 import TaskManager from "@/components/TaskManager";
 import { Toaster } from "@/components/ui/toaster";
 import { ProcessContextProvider } from "@/contexts/ProcessContext";
-import { io, Socket } from 'socket.io-client';
 import { useState, useEffect} from "react";
-import HttpCall from "./components/HttpCall";
+import { socket } from "@/services/socket.ts";
 
 function App() {
-  const [socketInstance,setSocketInstance] = useState<Socket | null>(null);
-  const [loading,setLoading] = useState(true)
-  const [buttonStatus,setButtonStatus] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
 
-  const socket = io("http://localhost:5001", {
-    autoConnect: false
-  });
-
-  const handleClick = () => {
-    if (buttonStatus === false){
-      setButtonStatus(true)
-    }else{
-      setButtonStatus(false)
-    }
-  }
-
-  async function fetchData(){
-    const request = await fetch("http://localhost:5001/http-call");
-    const data = await request.json();
-    console.log(data);
-  }
 
   useEffect(() => {
       socket.on('connect',() => {
         console.log("Connected to server")
       });
+
+      socket.on("processes",(data)=>{
+        console.log(data)
+      })
 
       socket.on("test",(data)=>{
         console.log(data)
@@ -44,8 +28,19 @@ function App() {
 
       return () => {
         socket.off('connect');
+        socket.off("processes")
       }; 
   },[])
+
+  async function startSimulation(){
+    socket.connect();
+    socket.emit("start");
+    setIsRunning(true)
+  }
+
+  async function stopSimulation(){
+    setIsRunning(false)
+  }
 
   
   return (
@@ -74,7 +69,12 @@ function App() {
                   <Circle />
                 </Container>
               </Stage>
-              <Button className=" self-end">Run</Button>
+              {isRunning ? (
+                <Button className=" self-end" onClick={stopSimulation}> Stop </Button>
+              ):(
+                <Button className=" self-end" onClick={startSimulation}>Run</Button>
+              )}
+              
               <SettingsPanel />
             </div>
             <TaskManager />
