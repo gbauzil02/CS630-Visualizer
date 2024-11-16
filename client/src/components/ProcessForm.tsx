@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -16,12 +15,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 const formSchema = z.object({
   size: z.coerce.number().positive().int(),
-  hasIO: z.boolean(),
-  events: z.coerce.number().positive().int().max(3).optional(),
+  io: z.coerce.number().positive().int().max(3),
 });
 
 type ProcessFormProps = {
-  addProcess: (size: number, hasIO: boolean, events?: number) => void;
+  addProcess: (size: number, io: number) => void;
 };
 
 export default function ProcessForm({ addProcess }: ProcessFormProps) {
@@ -29,15 +27,12 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       size: 1,
-      hasIO: false,
-      events: 1,
+      io: 0
     },
   });
 
-  const isHasIOChecked = form.watch("hasIO");
-
   function onSubmit(values: z.infer<typeof formSchema>) {
-    addProcess(values.size, values.hasIO, values.events);
+    addProcess(values.size, values.io);
   }
 
   return (
@@ -65,26 +60,7 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
         />
         <FormField
           control={form.control}
-          name="hasIO"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  id="process-io"
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel htmlFor="process-io">Has I/O:</FormLabel>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="events"
+          name="io"
           render={({ field }) => (
             <FormItem>
               <FormLabel htmlFor="process-events">Number of Events:</FormLabel>
@@ -93,9 +69,8 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
                   {...field}
                   id="process-events"
                   type="number"
-                  disabled={!isHasIOChecked}
                   placeholder="2"
-                  min={1}
+                  min={0}
                   max={3}
                 />
               </FormControl>

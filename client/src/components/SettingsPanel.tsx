@@ -33,10 +33,9 @@ import { useProcessContext } from "@/contexts/ProcessContext";
 export type Process = {
   pid: string;
   state: string;
-  IOStatus: string;
+  ioStatus: string;
   size: number;
-  hasIO: boolean;
-  numOfEvents?: number;
+  io: number;
 };
 
 const formSchema = z.object({
@@ -47,18 +46,14 @@ const formSchema = z.object({
 export default function SettingsPanel() {
   const { processes, setProcesses } = useProcessContext();
 
-  function addProcess(size: number, hasIO: boolean, numOfEvents?: number) {
+  function addProcess(size: number, io: number) {
     const process: Process = {
       pid: String(processes.length + 1),
       size,
-      hasIO,
       state: "New",
-      IOStatus: "None",
+      ioStatus: "None",
+      io
     };
-
-    if (hasIO) {
-      process.numOfEvents = numOfEvents;
-    }
 
     setProcesses([...processes, process]);
   }
@@ -68,7 +63,7 @@ export default function SettingsPanel() {
     timeSlice: number;
     memorySize: number;
   }) {
-    await fetch("http://localhost:3001/endpoint", {
+    await fetch("http://localhost:5001/load", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -124,10 +119,10 @@ export default function SettingsPanel() {
         <section className="space-y-2">
           <h2 className="font-semibold text-xl uppercase">Process Settings</h2>
           <div className="flex gap-2">
-            <Button onClick={() => addProcess(12, false)}>
+            <Button onClick={() => addProcess(12,0)}>
               Add Basic Process
             </Button>
-            <Button onClick={() => addProcess(12, true, 2)}>
+            <Button onClick={() => addProcess(12,2)}>
               Add Process with I/O
             </Button>
             <Popover>
