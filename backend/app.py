@@ -15,7 +15,7 @@ time_slice = 5 #5 seconds
 
 # memory should be multiples of 8
 memory_size = 64 # 64 GB
-available_memory = [64]
+available_memory = [memory_size]
 
 
 # only 1 thread allowed to access the "processor" at a time
@@ -41,7 +41,7 @@ class IOStatus(Enum):
     WAITING = 1
     NONE = 2
 
-processes = {}
+processes = []
 
 ready = Queue(maxsize = len(processes))
 
@@ -50,6 +50,7 @@ def mod_mem(num):
     available_memory.pop(0)
 
 def manager(process):
+    print("inside manager")
      # pass by reference versus pass by value 
     while process["state"] != State.EXIT.name:
         # NEW
@@ -309,9 +310,9 @@ def running(process):
 
     with messanger:
         print("process {} is running at: {}".format(process["pid"], time.ctime()[11:19]))
-    if process["duration"] > 5:
-        time.sleep(5)
-        process["duration"] -= 5
+    if process["duration"] > time_slice:
+        time.sleep(time_slice)
+        process["duration"] -= time_slice
 
     else:
         time.sleep(process["duration"])
@@ -356,6 +357,9 @@ def running(process):
                 process["io"] -= 3
         send_processes()
 
+def mod_processes(process):
+    processes.append(process)
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
@@ -375,18 +379,51 @@ def load():
     data = request.json
     processes_input = data.get('processes')
     
-    def run_task():
-        manager(processes_input)
     
-    threads_proc = []
+    # def run_task(process):
+    #     manager(process)
+    
+    # threads_proc = []
+    global processes
     for i in processes_input:
-        processes.append(i)
-        t = threading.Thread(target = run_task, args = (i,))
-        threads_proc.append(t)
-        t.start()
+        i["duration"] = random.randint(15,20)
+        i["ioStatus"] = i["ioStatus"].upper()
+        i["state"] = "NEW"
+        i["q1"] = 0
+        i["q2"] = 0
+        i["q3"] = 0
+        print("Process {}".format(i))
+        mod_processes(i) 
+
+        # t = threading.Thread(target = run_task, args = (i,))
+        # threads_proc.append(t)
+        # t.start()
+    print(processes)
 
     return jsonify({"message": "Task started"}), 200
 
+
+@app.route('/start', methods=['GET'])
+def start():
+    print("in start")
+    print(processes)
+    # def run_task(process):
+    #     print("calling manager")
+    #     manager(process)
+
+    threads_proc = []
+    for i in processes:
+        print("starting 1")
+        t = threading.Thread(target = manager, args = (i,))
+        print("starting 2")
+        threads_proc.append(t)
+        print("starting 3")
+        t.start()
+
+    for queue in threads_proc:
+        queue.join()
+    return jsonify({"OK": True}), 200
+ 
 
 @socketio.on('connect')
 def connect():
