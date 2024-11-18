@@ -4,15 +4,15 @@ from enum import Enum
 from threading import Semaphore
 from queue import Queue, Empty
 import random
-from flask import Flask,request,jsonify
+from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
 # time slices shouldn't be more than 20 seconds
-time_slice = 5 #5 seconds
+time_slice = 5  # 5 seconds
 
 # memory should be multiples of 8
-memory_size = 64 # 64 GB
+memory_size = 64  # 64 GB
 available_memory = [memory_size]
 
 
@@ -26,6 +26,7 @@ mem = Semaphore(1)
 
 lock = threading.Lock()
 
+
 class State(Enum):
     NEW = 1
     READY = 2
@@ -35,54 +36,70 @@ class State(Enum):
     BLOCK_SUS = 6
     READY_SUS = 7
 
+
 class IOStatus(Enum):
     WAITING = 1
     NONE = 2
 
+
 processes = []
 
-ready = Queue(maxsize = len(processes))
+ready = Queue(maxsize=len(processes))
+
 
 def mod_mem(num):
     available_memory.append(num)
     available_memory.pop(0)
 
+
 def manager(process):
     print("inside manager")
-     # pass by reference versus pass by value 
+    # pass by reference versus pass by value
     while process["state"] != State.EXIT.name:
         # NEW
         if process["state"] == State.NEW.name:
-                while process["state"] == State.NEW.name:
-                    if available_memory[0] >= process["size"]:
-                        with mem:
-                            mod_mem(available_memory[0] - process["size"])
+            while process["state"] == State.NEW.name:
+                if available_memory[0] >= process["size"]:
+                    with mem:
+                        mod_mem(available_memory[0] - process["size"])
+                    process["state"] = State.READY.name
+                    ready.put(process)
+                    with messanger:
+                        print(
+                            "process {} added to ready queue: {}".format(
+                                process["pid"], list(ready.queue)
+                            )
+                        )
+                        print(
+                            "process {} changed to ready. available memory: {}".format(
+                                process["pid"], available_memory
+                            )
+                        )
+
+                else:
+                    if suspend_a_blocked_process(process):
                         process["state"] = State.READY.name
                         ready.put(process)
+                        with mem:
+                            mod_mem(available_memory[0] - process["size"])
                         with messanger:
-                            print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
-                            print("process {} changed to ready. available memory: {}".format(process["pid"],available_memory))
-                
-                    else:  
-                        if suspend_a_blocked_process(process):
-                            process["state"] = State.READY.name
-                            ready.put(process)
-                            with mem:
-                                mod_mem(available_memory[0] - process["size"])
-                            with messanger:
-                                print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
-                                print("process {} changed to ready".format(process["pid"]))
-                                print("available memory: {}".format(available_memory))
-                        else:
-                            if available_memory[0] == memory_size:
-                                process["state"] = State.EXIT.name
-                                break
-                            continue
-                            # process["state"] = State.READY_SUS.name
-                            # with messanger:
-                            #     print("process {} changed to ready/suspend".format(process["pid"]))
-                            #     print("available memory: {}".format(available_memory))
-                    send_processes()
+                            print(
+                                "process {} added to ready queue: {}".format(
+                                    process["pid"], list(ready.queue)
+                                )
+                            )
+                            print("process {} changed to ready".format(process["pid"]))
+                            print("available memory: {}".format(available_memory))
+                    else:
+                        if available_memory[0] == memory_size:
+                            process["state"] = State.EXIT.name
+                            break
+                        continue
+                        # process["state"] = State.READY_SUS.name
+                        # with messanger:
+                        #     print("process {} changed to ready/suspend".format(process["pid"]))
+                        #     print("available memory: {}".format(available_memory))
+                send_processes()
 
         # READY => RUNNING
         if process["state"] == State.READY.name:
@@ -102,7 +119,6 @@ def manager(process):
                         putBack(nextp)
                         # print("nextp process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
 
-
                 if run:
                     if process["duration"] == 0:
                         process["state"] = State.EXIT.name
@@ -121,17 +137,20 @@ def manager(process):
                         processor.release()
                     ready.task_done()
                     with messanger:
-                        print("process {} back from running. Ready queue: {}".format(process["pid"], list(ready.queue)))
+                        print(
+                            "process {} back from running. Ready queue: {}".format(
+                                process["pid"], list(ready.queue)
+                            )
+                        )
                     break
-                else:
-                    continue
-            
-        
+
+                continue
+
         # BLOCKED AND BLOCKED/SUSPEND
         if process["state"] == State.BLOCKED.name:
-            q1 = threading.Thread(target = blocked, args = (process, "q1"))
-            q2 = threading.Thread(target = blocked, args = (process, "q2"))
-            q3 = threading.Thread(target = blocked, args = (process, "q3"))
+            q1 = threading.Thread(target=blocked, args=(process, "q1"))
+            q2 = threading.Thread(target=blocked, args=(process, "q2"))
+            q3 = threading.Thread(target=blocked, args=(process, "q3"))
 
             process["ioStatus"] = IOStatus.WAITING.name
             with messanger:
@@ -148,11 +167,11 @@ def manager(process):
                 queues.append(q2)
                 process["q2"] = 0
                 q2.start()
-            
-            if process["q3"] == 1: 
-                queues.append(q3) 
-                process["q3"] = 0 
-                q3.start()            
+
+            if process["q3"] == 1:
+                queues.append(q3)
+                process["q3"] = 0
+                q3.start()
 
             for queue in queues:
                 queue.join()
@@ -163,29 +182,42 @@ def manager(process):
                 process["state"] = State.READY.name
                 ready.put(process)
                 with messanger:
-                    print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
+                    print(
+                        "process {} added to ready queue: {}".format(
+                            process["pid"], list(ready.queue)
+                        )
+                    )
             else:
                 process["state"] = State.READY_SUS.name
             with messanger:
                 print("process {} I/O complete".format(process["pid"]))
             send_processes()
-        
-        #READY/SUSPEND
+
+        # READY/SUSPEND
         if process["state"] == State.READY_SUS.name:
             while process["state"] == State.READY_SUS.name:
                 if available_memory[0] >= process["size"]:
                     largest_process = find_largest_ready_sus_process()
                     if largest_process["pid"] == process["pid"]:
                         with messanger:
-                            print("process {} brought back into main memory".format(process["pid"]))
+                            print(
+                                "process {} brought back into main memory".format(
+                                    process["pid"]
+                                )
+                            )
                         with mem:
                             mod_mem(available_memory[0] - process["size"])
                         process["state"] = State.READY.name
                         ready.put(process)
                         with messanger:
-                            print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
+                            print(
+                                "process {} added to ready queue: {}".format(
+                                    process["pid"], list(ready.queue)
+                                )
+                            )
                         send_processes()
                         break
+
 
 def num_ready_sus():
     track = 0
@@ -193,6 +225,7 @@ def num_ready_sus():
         if i["state"] == State.READY_SUS.name:
             track += 1
     return track
+
 
 def find_best_blocked_sus_process():
     best_process = None
@@ -202,36 +235,38 @@ def find_best_blocked_sus_process():
         if process["state"] == State.READY_SUS.name:
             if process["size"] <= available_memory[0]:
                 diff = available_memory[0] - process["size"]
-                
+
                 if space_left is None or space_left < space_left:
-                    space_left = diff 
+                    space_left = diff
                     best_process = process
     return best_process
 
+
 def putBack(process):
     global ready
-    new_ready = Queue(maxsize = len(processes)) 
+    new_ready = Queue(maxsize=len(processes))
     new_ready.put(process)
     while not ready.empty():
         next = ready.get()
         new_ready.put(next)
     ready = new_ready
-    
+
 
 def find_largest_ready_sus_process():
     largest_process = None
 
     for process in processes:
         if process["state"] == State.READY_SUS.name:
-            if (largest_process is None or process["size"] > largest_process["size"]) and process["size"] <= available_memory[0]:
+            if (
+                largest_process is None or process["size"] > largest_process["size"]
+            ) and process["size"] <= available_memory[0]:
                 largest_process = process
-    
+
     return largest_process
-                
+
 
 def suspend_a_blocked_process(process):
     largest_process = find_largest_blocked_process()
-
 
     if largest_process is not None:
         if available_memory[0] - largest_process["size"] < process["size"]:
@@ -244,25 +279,28 @@ def suspend_a_blocked_process(process):
             with mem:
                 mod_mem(available_memory[0] + largest_process["size"])
             time.sleep(2)
-        
-        return True
-    else:
-        largest_process = find_largest_ready_process()
 
-        if largest_process is None or available_memory[0] - largest_process["size"] < process["size"]:
-            return False
-
-        if largest_process:
-            with messanger:
-                print(f"Suspending process {largest_process['pid']} to free memory.")
-            largest_process["state"] = State.READY_SUS.name
-            send_processes()
-            with mem:
-                mod_mem(available_memory[0] + largest_process["size"])
-            
-            time.sleep(2)
-        
         return True
+
+    largest_process = find_largest_ready_process()
+
+    if (
+        largest_process is None
+        or available_memory[0] - largest_process["size"] < process["size"]
+    ):
+        return False
+
+    if largest_process:
+        with messanger:
+            print(f"Suspending process {largest_process['pid']} to free memory.")
+        largest_process["state"] = State.READY_SUS.name
+        send_processes()
+        with mem:
+            mod_mem(available_memory[0] + largest_process["size"])
+
+        time.sleep(2)
+
+    return True
 
 
 def find_largest_blocked_process():
@@ -272,8 +310,9 @@ def find_largest_blocked_process():
         if process["state"] == State.BLOCKED.name:
             if largest_process is None or process["size"] > largest_process["size"]:
                 largest_process = process
-    
+
     return largest_process
+
 
 def find_largest_ready_process():
     largest_process = None
@@ -282,32 +321,51 @@ def find_largest_ready_process():
         if process["state"] == State.READY.name:
             if largest_process is None or process["size"] > largest_process["size"]:
                 largest_process = process
-    
+
     return largest_process
+
 
 def send_processes():
     with messanger:
         print("-----------------------------------------------")
-        new_list = [{"pid": process["pid"], "ioStatus": process["ioStatus"], "state": process["state"]} for process in processes]
+        new_list = [
+            {
+                "pid": process["pid"],
+                "ioStatus": process["ioStatus"],
+                "state": process["state"],
+            }
+            for process in processes
+        ]
         socketio.emit("processes", new_list)
 
+
 def blocked(process, q):
-    duration_options = [5,10,15]
-    random_int = random.randint(0,len(duration_options)-1)
+    duration_options = [5, 10, 15]
+    random_int = random.randint(0, len(duration_options) - 1)
 
     ioLength = duration_options[random_int]
     with messanger:
-        print("process {} is waiting for io on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
+        print(
+            "process {} is waiting for io on queue #{} at time: {}".format(
+                process["pid"], q, time.ctime()[11:19]
+            )
+        )
     time.sleep(ioLength)
 
     with messanger:
-        print("process {} io completed on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
+        print(
+            "process {} io completed on queue #{} at time: {}".format(
+                process["pid"], q, time.ctime()[11:19]
+            )
+        )
 
 
 def running(process):
 
     with messanger:
-        print("process {} is running at: {}".format(process["pid"], time.ctime()[11:19]))
+        print(
+            "process {} is running at: {}".format(process["pid"], time.ctime()[11:19])
+        )
     if process["duration"] > time_slice:
         time.sleep(time_slice)
         process["duration"] -= time_slice
@@ -316,9 +374,6 @@ def running(process):
         time.sleep(process["duration"])
         process["duration"] = 0
 
-    
-
-
     if process["duration"] == 0:
         process["state"] = State.EXIT.name
         with mem:
@@ -326,16 +381,22 @@ def running(process):
         send_processes()
     else:
         with messanger:
-            print("process {} timeout at: {}".format(process["pid"], time.ctime()[11:19]))
-        
+            print(
+                "process {} timeout at: {}".format(process["pid"], time.ctime()[11:19])
+            )
+
         if process["io"] == 0:
             process["state"] = State.READY.name
-            
+
             with messanger:
-                print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
+                print(
+                    "process {} added to ready queue: {}".format(
+                        process["pid"], list(ready.queue)
+                    )
+                )
 
             ready.put(process)
-            
+
         else:
             process["state"] = State.BLOCKED.name
             process["status"] = IOStatus.WAITING.name
@@ -355,47 +416,47 @@ def running(process):
                 process["io"] -= 3
         send_processes()
 
+
 def mod_processes(process):
     processes.append(process)
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = "secret"
+app.config["SECRET_KEY"] = "secret"
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
-socketio = SocketIO(app,cors_allowed_origins="http://localhost:5173")
+socketio = SocketIO(app, cors_allowed_origins="http://localhost:5173")
 
 
-@app.route('/load', methods=['POST'])
+@app.route("/load", methods=["POST"])
 def load():
     global memory_size
     global time_slice
 
     data = request.json
-    processes_input = data.get('processes')
-    mem_input = data.get('memorySize')
-    time_input = data.get('timeSlice')
+    processes_input = data.get("processes")
+    mem_input = data.get("memorySize")
+    time_input = data.get("timeSlice")
 
     memory_size = mem_input
     time_slice = time_input
 
     print(processes_input)
-    
-    
+
     # def run_task(process):
     #     manager(process)
-    
+
     # threads_proc = []
-    global processes 
+    global processes
     processes = []
     for i in processes_input:
-        i["duration"] = random.randint(15,20)
+        i["duration"] = random.randint(15, 20)
         i["ioStatus"] = i["ioStatus"].upper()
         i["state"] = "NEW"
         i["q1"] = 0
         i["q2"] = 0
         i["q3"] = 0
         print("Process {}".format(i))
-        mod_processes(i) 
+        mod_processes(i)
 
         # t = threading.Thread(target = run_task, args = (i,))
         # threads_proc.append(t)
@@ -404,15 +465,15 @@ def load():
 
     return jsonify({"message": "Task started"}), 200
 
-@socketio.on('connect')
+
+@socketio.on("connect")
 def connect():
     print(request.sid)
     print("Client is connected")
-    emit("test", {
-        "data":f"{request.sid} is connected"
-    })
+    emit("test", {"data": f"{request.sid} is connected"})
 
-@socketio.on('start')
+
+@socketio.on("start")
 def start():
     print("Memory size: {}".format(memory_size))
     print("Time slice: {}".format(time_slice))
@@ -420,7 +481,7 @@ def start():
 
     threads_proc = []
     for i in processes:
-        t = threading.Thread(target = manager, args = (i,))
+        t = threading.Thread(target=manager, args=(i,))
         threads_proc.append(t)
         t.start()
 
@@ -428,9 +489,8 @@ def start():
         queue.join()
     return jsonify({"OK": True}), 200
 
-    
 
-@socketio.on('disconnect')
+@socketio.on("disconnect")
 def disconnected():
     print("User disconnected")
     print(request.sid)
@@ -439,5 +499,6 @@ def disconnected():
     except Exception as e:
         print(f"Error during disconnect: {e}")
 
+
 if __name__ == "__main__":
-    socketio.run(app,debug=True,port=5001)
+    socketio.run(app, debug=True, port=5001)
