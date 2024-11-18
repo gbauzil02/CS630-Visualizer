@@ -8,7 +8,6 @@ from threading import Semaphore
 import random
 from queue import Queue
 from queue import Empty
-import pprint
 
 # time slices shouldn't be more than 20 seconds
 time_slice = 5 #5 seconds
