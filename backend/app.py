@@ -232,7 +232,6 @@ def find_largest_ready_sus_process():
 def suspend_a_blocked_process(process):
     largest_process = find_largest_blocked_process()
 
-
     if largest_process is not None:
         if available_memory[0] - largest_process["size"] < process["size"]:
             return False
@@ -367,7 +366,6 @@ socketio = SocketIO(app,cors_allowed_origins="http://localhost:5173")
 @app.route('/http-call')
 def http_call():
     data = {'data':'This text was fetched using an HTTP Call to server on render'}
-    # emit("data", f"This text was fetched using an HTTP Call to server on render")
     return jsonify(data)
 
 
@@ -387,11 +385,6 @@ def load():
 
     print(processes_input)
     
-    
-    # def run_task(process):
-    #     manager(process)
-    
-    # threads_proc = []
     global processes 
     processes = []
     for i in processes_input:
@@ -404,9 +397,6 @@ def load():
         print("Process {}".format(i))
         mod_processes(i) 
 
-        # t = threading.Thread(target = run_task, args = (i,))
-        # threads_proc.append(t)
-        # t.start()
     print(processes)
 
     return jsonify({"message": "Task started"}), 200
@@ -445,13 +435,6 @@ def disconnected():
         emit("disconnect", f"user {request.sid} has been disconnected", broadcast=True)
     except Exception as e:
         print(f"Error during disconnect: {e}")
-
-@socketio.on('data')
-def handle_message(data):
-    print("Data from the frontend", str(data))
-    emit("data", {
-        'data':data,'id':request.sid
-    },broadcast=True)
 
 if __name__ == "__main__":
     socketio.run(app,debug=True,port=5001)
