@@ -326,6 +326,7 @@ def find_largest_ready_process():
 
 
 def send_processes():
+    """Send process list to the client via socketio"""
     with messanger:
         print("-----------------------------------------------")
         new_list = [
@@ -424,7 +425,9 @@ def mod_processes(process):
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "secret"
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
-socketio = SocketIO(app, cors_allowed_origins="http://localhost:5173")
+socketio = SocketIO(
+    app, cors_allowed_origins="http://localhost:5173", async_mode="threading"
+)
 
 
 @app.route("/load", methods=["POST"])
