@@ -50,9 +50,9 @@ export default function SettingsPanel() {
     const process: Process = {
       pid: String(processes.length + 1),
       size,
-      state: "New",
+      state: "NEW",
       ioStatus: "None",
-      io
+      io,
     };
 
     setProcesses([...processes, process]);
@@ -93,7 +93,6 @@ export default function SettingsPanel() {
         return;
       }
       loadSimulation({ processes, ...values });
-      console.log({ processes, ...values });
       toast({
         title: "Success",
         description: "Simulation loaded successfully!",
@@ -119,10 +118,8 @@ export default function SettingsPanel() {
         <section className="space-y-2">
           <h2 className="font-semibold text-xl uppercase">Process Settings</h2>
           <div className="flex gap-2">
-            <Button onClick={() => addProcess(12,0)}>
-              Add Basic Process
-            </Button>
-            <Button onClick={() => addProcess(12,2)}>
+            <Button onClick={() => addProcess(12, 0)}>Add Basic Process</Button>
+            <Button onClick={() => addProcess(12, 2)}>
               Add Process with I/O
             </Button>
             <Popover>
