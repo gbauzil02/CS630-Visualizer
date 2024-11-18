@@ -101,7 +101,6 @@ def manager(process):
                         run = True
                     else:
                         putBack(nextp)
-                        # print("nextp process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
 
 
                 if run:
