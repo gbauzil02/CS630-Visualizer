@@ -19,16 +19,9 @@ function App() {
       console.log("Disconnected from server");
     });
 
-    socket.on("test", (data) => {
-      console.log(data);
-    });
-
-    socket.on("processes", (data) => {
-      console.log(data);
-    });
-
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
       socket.disconnect();
     };
   }, []);
@@ -40,6 +33,7 @@ function App() {
   }
 
   async function stopSimulation() {
+    socket.disconnect();
     setIsRunning(false);
   }
 
@@ -50,13 +44,12 @@ function App() {
           7 State Process Model Simulation
         </h1>
         <ProcessContextProvider>
-          <div className="flex gap-4">
+          <div className="flex h-full gap-4">
             <div className="w-full flex flex-col gap-4">
               <Container />
               {isRunning ? (
                 <Button className=" self-end" onClick={stopSimulation}>
-                  {" "}
-                  Stop{" "}
+                  Stop
                 </Button>
               ) : (
                 <Button className=" self-end" onClick={startSimulation}>
