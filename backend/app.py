@@ -78,30 +78,38 @@ def manager(process):
                             print("process {} changed to ready. available memory: {}".format(process["pid"],available_memory))
                 
                     else:
-                        # Free up space in main memory by suspending a process 
-                        if suspend_a_process(process):
-                            # decrease available memory
-                            with mem:
-                                mod_mem(available_memory[0] - process["size"])
+                        if num_blocked() > 0:
+                            # Free up space in main memory by suspending a process 
+                            if suspend_a_blocked_process(process):
+                                # decrease available memory
+                                with mem:
+                                    mod_mem(available_memory[0] - process["size"])
 
-                            # change process state
-                            process["state"] = State.READY.name
+                                # change process state
+                                process["state"] = State.READY.name
 
-                            # add process to ready queue
-                            ready.put(process)
+                                # add process to ready queue
+                                ready.put(process)
 
-                            with messanger:
-                                print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
-                                print("process {} changed to ready".format(process["pid"]))
-                                print("available memory: {}".format(available_memory))
-                        else:
-                            # if not enough memory is available and there are no processes then process is too large 
-                            if available_memory[0] == memory_size:
-                                # change process state to exit
-                                process["state"] = State.EXIT.name
+                                with messanger:
+                                    print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
+                                    print("process {} changed to ready".format(process["pid"]))
+                                    print("available memory: {}".format(available_memory))
+                            else:
+                                with messanger:
+                                    print("process {} added to ready/sus: {}".format(process["pid"]))
+                                process["state"] = State.READY_SUS.name
                                 send_processes()
-                                return True
-                            continue
+                                break
+                        else:
+                            with messanger:
+                                print("process {} added to ready/sus".format(process["pid"]))
+                            process["state"] = State.READY_SUS.name
+                            send_processes()
+                            break
+
+                            
+                            
                     # Send message to the frontend with new update
                     send_processes()
 
@@ -117,10 +125,10 @@ def manager(process):
                         while nextp["state"] != State.READY.name:
                             nextp = ready.get()
                     except Empty:
-                        print("Queue is empty, no processes to run.")
-                        continue
+                        run = True
+                        print("Queue is empty")
                     # if the next process that can be run is the current process, then update run variable
-                    if nextp["pid"] == process["pid"]:
+                    if nextp["pid"] == process["pid"] or run:
                         run = True
                     else:
                         # place item back in the front of the queue
@@ -229,6 +237,46 @@ def manager(process):
                         # send message to frontend
                         send_processes()
                         break
+                
+                with lock:
+                    if num_blocked() > 0:
+                            sus = suspend_a_blocked_process(process)
+                            # decrease available memory
+                            if sus:
+                                largest_process = find_largest_ready_sus_process()
+                                with messanger:
+                                    print("largest process {} vs current process {}".format(largest_process["pid"], process["pid"]))
+                                if largest_process["pid"] == process["pid"]:
+                                    with messanger:
+                                        print("process {} into main memory".format(process["pid"]))
+                                    with mem:
+                                        # decrease memory by process size
+                                        mod_mem(available_memory[0] - process["size"])
+                                    # change state and add to ready queue
+                                    process["state"] = State.READY.name
+                                    ready.put(process)
+                                    with messanger:
+                                        print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
+                                    
+                                    # send message to frontend
+                                    send_processes()
+                                    break
+
+
+def num_blocked():
+    track = 0
+    for i in processes:
+        if i["state"] == State.BLOCKED.name:
+            track += 1
+    return track
+
+def num_ready_sus():
+    track = 0
+    for i in processes:
+        if i["state"] == State.READY_SUS.name:
+            track += 1
+    return track
+
 
 # puts back process taken from ready queue since Queue object has no peek function
 def putBack(process):
@@ -243,13 +291,31 @@ def putBack(process):
 # Finds the largest ready/suspend process to bring back into memory
 def find_largest_ready_sus_process():
     largest_process = None
+    max_size = 0
 
     for process in processes:
-        if process["state"] == State.READY_SUS.name:
-            if (largest_process is None or process["size"] > largest_process["size"]) and process["size"] <= available_memory[0]:
+        if process["state"] == State.READY_SUS.name and process["size"] <= available_memory[0]:
+            if process["size"] > max_size:  # Compare current process size to max_size
+                max_size = process["size"]
                 largest_process = process
     
     return largest_process
+
+def suspend_a_blocked_process(process):
+    # searches for blocked processes in main memory first
+    largest_process = find_largest_blocked_process()
+    if largest_process is not None:
+        if available_memory[0] + largest_process["size"] < process["size"]:
+            return False
+        with messanger:
+            print(f"Suspending process {largest_process['pid']} to free memory.")
+        largest_process["state"] = State.BLOCK_SUS.name
+        with mem:
+            mod_mem(available_memory[0] + largest_process["size"])
+        send_processes()
+        
+        return True
+    return False
                 
 # Suspends a process in main memory to bring in a new process
 def suspend_a_process(process):
@@ -257,34 +323,31 @@ def suspend_a_process(process):
     largest_process = find_largest_blocked_process()
 
     if largest_process is not None:
-        if available_memory[0] - largest_process["size"] < process["size"]:
+        if available_memory[0] - largest_process["size"] <= process["size"]:
             return False
         if largest_process:
             with messanger:
                 print(f"Suspending process {largest_process['pid']} to free memory.")
             largest_process["state"] = State.BLOCK_SUS.name
-            send_processes()
             with mem:
-                mod_mem(available_memory[0] + largest_process["size"])
-            time.sleep(2)
+                mod_mem(available_memory[0] - largest_process["size"])
+            send_processes()
         
         return True
     else:
         # if there are currently no blocked processes in main memory, then a ready process is suspended
         largest_process = find_largest_ready_process()
 
-        if largest_process is None or available_memory[0] - largest_process["size"] < process["size"]:
+        if largest_process is None or available_memory[0] - largest_process["size"] <= process["size"]:
             return False
 
         if largest_process:
             with messanger:
                 print(f"Suspending process {largest_process['pid']} to free memory.")
             largest_process["state"] = State.READY_SUS.name
-            send_processes()
             with mem:
                 mod_mem(available_memory[0] + largest_process["size"])
-            
-            time.sleep(2)
+            send_processes()
         
         return True
 
