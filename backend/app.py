@@ -334,6 +334,9 @@ def send_processes():
                 "pid": process["pid"],
                 "ioStatus": process["ioStatus"],
                 "state": process["state"],
+                "q1":process["q1"],
+                "q2":process["q2"],
+                "q3":process["q3"]
             }
             for process in processes
         ]
