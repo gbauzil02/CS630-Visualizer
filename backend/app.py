@@ -559,6 +559,8 @@ def blocked(process, q):
 
     with messanger:
         print("process {} io completed on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
+    process[q] = 0
+    send_processes()
 
 # Processor
 def running(process):
