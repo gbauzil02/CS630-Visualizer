@@ -15,6 +15,9 @@ export default function Container() {
     "EXIT",
     "BLOCK_SUS",
     "BLOCKED",
+    "BLOCKED_1",
+    "BLOCKED_2",
+    "BLOCKED_3",
   ];
 
   useEffect(() => {
@@ -29,13 +32,13 @@ export default function Container() {
   }, [processes, setProcesses]);
 
   return (
-    <motion.div layout className="grid grid-cols-4 gap-x-4 gap-y-16">
+    <motion.div layout className="grid grid-cols-4 gap-x-4 gap-y-8">
       {STATES.map((state) => (
         <State
           key={state}
           name={state}
           processes={processes}
-          className="first:col-span-full first:justify-self-start first:w-1/4 shadow-md"
+          className="first:col-span-full first:justify-self-start first:w-1/4 [&:nth-last-child(-n+3)]:col-start-2 shadow-md"
         />
       ))}
     </motion.div>
