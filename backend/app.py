@@ -442,6 +442,7 @@ def running(process):
                 print("process {} added to ready queue: {}".format(process["pid"], list(ready.queue)))
 
             ready.put(process)
+            send_processes()
             
         else:
             # if process has io, then state and IO status is changed
@@ -452,20 +453,20 @@ def running(process):
             if process["io"] == 1:
                 process["q1"] = 1
                 process["io"] -= 1
+                send_processes()
 
             elif process["io"] == 2:
                 process["q1"] = 1
                 process["q2"] = 1
                 process["io"] -= 2
+                send_processes()
 
             else:
                 process["q1"] = 1
                 process["q2"] = 1
                 process["q3"] = 1
                 process["io"] -= 3
-
-        # send message to frontend
-        send_processes()
+                send_processes()
 
 # adds processes to process list to be processed
 def mod_processes(process):
