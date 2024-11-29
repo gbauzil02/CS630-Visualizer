@@ -26,6 +26,12 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!socket.connected) {
+      setIsRunning(false);
+    }
+  }, []);
+
   async function startSimulation() {
     socket.connect();
     socket.emit("start");
@@ -33,6 +39,7 @@ function App() {
   }
 
   async function stopSimulation() {
+    socket.emit("stop");
     socket.disconnect();
     setIsRunning(false);
   }
