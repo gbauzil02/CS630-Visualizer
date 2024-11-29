@@ -481,7 +481,7 @@ def mod_processes(process):
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
-socketio = SocketIO(app,cors_allowed_origins="http://localhost:5173")
+socketio = SocketIO(app,cors_allowed_origins="http://localhost:5173",async_mode="threading")
 
 # test endpoint
 @app.route('/http-call')
