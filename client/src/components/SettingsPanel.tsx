@@ -36,6 +36,9 @@ export type Process = {
   ioStatus: string;
   size: number;
   io: number;
+  q1: number;
+  q2: number;
+  q3: number;
 };
 
 const formSchema = z.object({
@@ -53,6 +56,9 @@ export default function SettingsPanel() {
       state: "NEW",
       ioStatus: "None",
       io,
+      q1: 0,
+      q2: 0,
+      q3: 0,
     };
 
     setProcesses([...processes, process]);
