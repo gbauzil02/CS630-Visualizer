@@ -1,9 +1,9 @@
 import React, { useState, createContext } from "react";
-import type { Process } from "@/components/SettingsPanel";
+import { UpdatedProcess } from "@/components/State";
 
 type ProcessContextType = {
-  processes: Process[];
-  setProcesses: React.Dispatch<React.SetStateAction<Process[]>>;
+  processes: UpdatedProcess[];
+  setProcesses: React.Dispatch<React.SetStateAction<UpdatedProcess[]>>;
 };
 
 export const ProcessContext = createContext<ProcessContextType | null>(null);
@@ -13,7 +13,7 @@ export function ProcessContextProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [processes, setProcesses] = useState<Process[]>([]);
+  const [processes, setProcesses] = useState<UpdatedProcess[]>([]);
 
   return (
     <ProcessContext.Provider value={{ processes, setProcesses }}>
