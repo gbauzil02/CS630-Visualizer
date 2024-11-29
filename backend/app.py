@@ -47,6 +47,9 @@ class IOStatus(Enum):
 # Contains processes to be processed by the model
 processes = []
 
+# Process threads
+threads_proc = []
+
 # Ready queue for processes waiting to be executed
 ready = Queue(maxsize = len(processes))
 
@@ -540,6 +543,7 @@ def start():
     print(processes)
 
     # starts threads for all processes
+    global threads_proc
     threads_proc = []
     for i in processes:
         t = threading.Thread(target = manager, args = (i,))
@@ -551,6 +555,15 @@ def start():
     
     # returns okay when processes end
     return jsonify({"OK": True}), 200
+
+# Stops simulation
+@socketio.on('stop')
+def stop():
+    global threads_proc
+    threads_proc = []
+    for i in threads_proc:
+        i._stop_event.set()
+    
 
     
 # Socket enpoint that confirms client disconnection
