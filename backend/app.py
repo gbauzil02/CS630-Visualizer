@@ -16,7 +16,7 @@ time_slice = 5 # default: 5 seconds
 memory_size = 64 # default 64 kB
 available_memory = [memory_size]
 
-
+sim_run = False
 # only 1 thread allowed to access the "processor" at a time
 processor = Semaphore(1)
 
@@ -50,6 +50,10 @@ processes = []
 # Process threads
 threads_proc = []
 
+# stop event for threads
+stop = [threading.Event()]
+stop_event = stop[0]
+
 # Ready queue for processes waiting to be executed
 ready = Queue(maxsize = len(processes))
 
@@ -60,17 +64,37 @@ def mod_mem(num):
 
 # Controls processes based on what state they are in
 def manager(process):
+    global stop_event
     # While a process is currently running 
     while process["state"] != State.EXIT.name:
         # NEW
         if process["state"] == State.NEW.name:
                 while process["state"] == State.NEW.name:
+                    if stop_event.is_set():
+                        print("Stopping process {}".format({process['pid']}))
+                        process["duration"] = 0
+                        process["state"] = "EXIT"
+                        process["q1"] = 0
+                        process["q2"] = 0
+                        process["q3"] = 0
+                        return
                     # Check available memory size is greater than or equal to current process before admitting
                     if available_memory[0] >= process["size"]:
 
                         # decrease available memory and change process to ready
                         with mem:
                             mod_mem(available_memory[0] - process["size"])
+
+                        if stop_event.is_set():
+                            print("Stopping process {}".format({process['pid']}))
+                            process["duration"] = 0
+                            process["ioStatus"] = process["ioStatus"].upper()
+                            process["state"] = "EXIT"
+                            process["q1"] = 0
+                            process["q2"] = 0
+                            process["q3"] = 0
+                            return 
+                        
                         process["state"] = State.READY.name
 
                         # add process to ready queue
@@ -89,6 +113,15 @@ def manager(process):
                                     mod_mem(available_memory[0] - process["size"])
 
                                 # change process state
+                                if stop_event.is_set():
+                                    print("Stopping process {}".format({process['pid']}))
+                                    process["duration"] = 0
+                                    process["ioStatus"] = process["ioStatus"].upper()
+                                    process["state"] = "EXIT"
+                                    process["q1"] = 0
+                                    process["q2"] = 0
+                                    process["q3"] = 0
+                                    return
                                 process["state"] = State.READY.name
 
                                 # add process to ready queue
@@ -101,12 +134,31 @@ def manager(process):
                             else:
                                 with messanger:
                                     print("process {} added to ready/sus: {}".format(process["pid"]))
+                                if stop_event.is_set():
+                                    print("Stopping process {}".format({process['pid']}))
+                                    process["duration"] = 0
+                                    process["ioStatus"] = process["ioStatus"].upper()
+                                    process["state"] = "EXIT"
+                                    process["q1"] = 0
+                                    process["q2"] = 0
+                                    process["q3"] = 0
+                                    return
                                 process["state"] = State.READY_SUS.name
                                 send_processes()
                                 break
                         else:
                             with messanger:
                                 print("process {} added to ready/sus".format(process["pid"]))
+                            
+                            if stop_event.is_set():
+                                print("Stopping process {}".format({process['pid']}))
+                                process["duration"] = 0
+                                process["ioStatus"] = process["ioStatus"].upper()
+                                process["state"] = "EXIT"
+                                process["q1"] = 0
+                                process["q2"] = 0
+                                process["q3"] = 0
+                                return
                             process["state"] = State.READY_SUS.name
                             send_processes()
                             break
@@ -121,6 +173,15 @@ def manager(process):
             # Process cannot run yet
             run = False
             while process["state"] == State.READY.name:
+                if stop_event.is_set():
+                        print("Stopping process {}".format({process['pid']}))
+                        process["duration"] = 0
+                        process["ioStatus"] = process["ioStatus"].upper()
+                        process["state"] = "EXIT"
+                        process["q1"] = 0
+                        process["q2"] = 0
+                        process["q3"] = 0
+                        return
                 with lock:
                     try:
                         # check if next process in the ready queue is ready
@@ -141,6 +202,15 @@ def manager(process):
                 if run:
                     # check if process has time left to run
                     if process["duration"] == 0:
+                        if stop_event.is_set():
+                            print("Stopping process {}".format({process['pid']}))
+                            process["duration"] = 0
+                            process["ioStatus"] = process["ioStatus"].upper()
+                            process["state"] = "NEW"
+                            process["q1"] = 0
+                            process["q2"] = 0
+                            process["q3"] = 0
+                            return
                         process["state"] = State.EXIT.name
                         with mem:
                             # increase availble memory
@@ -153,6 +223,15 @@ def manager(process):
                     # claim control over processor
                     with lock:
                         # change state
+                        if stop_event.is_set():
+                            print("Stopping process {}".format({process['pid']}))
+                            process["duration"] = 0
+                            process["ioStatus"] = process["ioStatus"].upper()
+                            process["state"] = "EXIT"
+                            process["q1"] = 0
+                            process["q2"] = 0
+                            process["q3"] = 0
+                            return
                         process["state"] = State.RUNNING.name
                         send_processes() # Send message to the frontend with new update
                         processor.acquire() # semWait()
@@ -168,6 +247,15 @@ def manager(process):
         
         # BLOCKED AND BLOCKED/SUSPEND
         if process["state"] == State.BLOCKED.name:
+            if stop_event.is_set():
+                print("Stopping process {}".format({process['pid']}))
+                process["duration"] = 0
+                process["ioStatus"] = process["ioStatus"].upper()
+                process["state"] = "EXIT"
+                process["q1"] = 0
+                process["q2"] = 0
+                process["q3"] = 0
+                return
             # create threads for each queue (can only open a maximum of 3 at a time)
             q1 = threading.Thread(target = blocked, args = (process, "q1"))
             q2 = threading.Thread(target = blocked, args = (process, "q2"))
@@ -200,6 +288,15 @@ def manager(process):
             for queue in queues:
                 queue.join()
 
+            if stop_event.is_set():
+                print("Stopping process {}".format({process['pid']}))
+                process["duration"] = 0
+                process["ioStatus"] = process["ioStatus"].upper()
+                process["state"] = "EXIT"
+                process["q1"] = 0
+                process["q2"] = 0
+                process["q3"] = 0
+                return
             # change IO status to NONE since all threads are complete at this point
             process["ioStatus"] = IOStatus.NONE.name
 
@@ -221,6 +318,15 @@ def manager(process):
         #READY/SUSPEND
         if process["state"] == State.READY_SUS.name:
             while process["state"] == State.READY_SUS.name:
+                if stop_event.is_set():
+                    print("Stopping process {}".format({process['pid']}))
+                    process["duration"] = 0
+                    process["ioStatus"] = process["ioStatus"].upper()
+                    process["state"] = "EXIT"
+                    process["q1"] = 0
+                    process["q2"] = 0
+                    process["q3"] = 0
+                    return
                 # process constantly checks if available memory is greater than or equal to its size
                 if available_memory[0] >= process["size"]:
                     # checks if it is the largest ready/suspend process given the available memory
@@ -232,6 +338,15 @@ def manager(process):
                             # decrease memory by process size
                             mod_mem(available_memory[0] - process["size"])
                         # change state and add to ready queue
+                        if stop_event.is_set():
+                            print("Stopping process {}".format({process['pid']}))
+                            process["duration"] = 0
+                            process["ioStatus"] = process["ioStatus"].upper()
+                            process["state"] = "EXIT"
+                            process["q1"] = 0
+                            process["q2"] = 0
+                            process["q3"] = 0
+                            return
                         process["state"] = State.READY.name
                         ready.put(process)
                         with messanger:
@@ -243,6 +358,15 @@ def manager(process):
                 
                 with lock:
                     if num_blocked() > 0:
+                            if stop_event.is_set():
+                                print("Stopping process {}".format({process['pid']}))
+                                process["duration"] = 0
+                                process["ioStatus"] = process["ioStatus"].upper()
+                                process["state"] = "EXIT"
+                                process["q1"] = 0
+                                process["q2"] = 0
+                                process["q3"] = 0
+                                return
                             sus = suspend_a_blocked_process(process)
                             # decrease available memory
                             if sus:
@@ -255,6 +379,16 @@ def manager(process):
                                     with mem:
                                         # decrease memory by process size
                                         mod_mem(available_memory[0] - process["size"])
+                                    
+                                    if stop_event.is_set():
+                                        print("Stopping process {}".format({process['pid']}))
+                                        process["duration"] = 0
+                                        process["ioStatus"] = process["ioStatus"].upper()
+                                        process["state"] = "EXIT"
+                                        process["q1"] = 0
+                                        process["q2"] = 0
+                                        process["q3"] = 0
+                                        return
                                     # change state and add to ready queue
                                     process["state"] = State.READY.name
                                     ready.put(process)
@@ -378,6 +512,8 @@ def find_largest_ready_process():
 
 # Sends all processes (pid, iostatus, state) to the frontend
 def send_processes():
+    if not sim_run:
+        return
     with messanger:
         print("-----------------------------------------------")
         new_list = [
@@ -397,11 +533,29 @@ def send_processes():
 def blocked(process, q):
     duration_options = [5,10,15]
     random_int = random.randint(0,len(duration_options)-1)
-
     ioLength = duration_options[random_int]
     with messanger:
         print("process {} is waiting for io on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
+
+    if stop_event.is_set():
+        print("Stopping process {}".format({process['pid']}))
+        process["duration"] = 0
+        process["ioStatus"] = process["ioStatus"].upper()
+        process["state"] = "EXIT"
+        process["q1"] = 0
+        process["q2"] = 0
+        process["q3"] = 0
+        return
     time.sleep(ioLength)
+    if stop_event.is_set():
+        print("Stopping process {}".format({process['pid']}))
+        process["duration"] = 0
+        process["ioStatus"] = process["ioStatus"].upper()
+        process["state"] = "EXIT"
+        process["q1"] = 0
+        process["q2"] = 0
+        process["q3"] = 0
+        return
 
     with messanger:
         print("process {} io completed on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
@@ -494,8 +648,12 @@ def http_call():
 def load():
     global memory_size
     global time_slice
+    # global stop_event
+    global sim_run
 
+    sim_run = False
     data = request.json
+    stop_event.clear()
 
     # retrieves processes, memorysize, and time slice
     processes_input = data.get('processes')
@@ -541,7 +699,8 @@ def start():
     print("Memory size: {}".format(memory_size))
     print("Time slice: {}".format(time_slice))
     print(processes)
-
+    global sim_run
+    sim_run = True
     # starts threads for all processes
     global threads_proc
     threads_proc = []
@@ -560,10 +719,23 @@ def start():
 @socketio.on('stop')
 def stop():
     global threads_proc
+    global processes
+    global stop_event
+    global sim_run
+
+    sim_run = False
+    # Signal all threads to stop
+    stop_event.set()
+    print("STOP EVENT: {}".format(stop_event.is_set()))
+    # Wait for all threads to exit
+    for thread in threads_proc:
+        thread.join()
+
+    # Clear processes and threads list
+    processes = []
     threads_proc = []
-    for i in threads_proc:
-        i._stop_event.set()
-    
+
+    return jsonify({"OK": True}), 200
 
     
 # Socket enpoint that confirms client disconnection
