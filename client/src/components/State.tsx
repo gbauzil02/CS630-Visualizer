@@ -1,10 +1,16 @@
 import { motion } from "motion/react";
 import type { Process } from "@/components/SettingsPanel";
 
+export type UpdatedProcess = Process & {
+  q1: number;
+  q2: number;
+  q3: number;
+};
+
 type StateProps = {
   name: string;
   className?: string;
-  processes: Process[];
+  processes: UpdatedProcess[];
 };
 
 export default function State({ name, className, processes }: StateProps) {
@@ -13,7 +19,18 @@ export default function State({ name, className, processes }: StateProps) {
       <h2 className="font-bold">{name}</h2>
       <motion.ul className="h-16 border border-black bg-muted px-1 flex gap-1 overflow-x-auto">
         {processes
-          .filter((process) => process.state === name)
+          .filter((process) => {
+            if (name === "BLOCKED_1") {
+              return process.state === "BLOCKED" && process.q1 === 1;
+            }
+            if (name === "BLOCKED_2") {
+              return process.state === "BLOCKED" && process.q2 === 1;
+            }
+            if (name === "BLOCKED_3") {
+              return process.state === "BLOCKED" && process.q3 === 1;
+            }
+            return process.state === name;
+          })
           .map((process) => (
             <motion.li
               key={process.pid}
