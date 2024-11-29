@@ -272,17 +272,14 @@ def manager(process):
             queues = []
             if process["q1"] == 1:
                 queues.append(q1)
-                process["q1"] = 0
                 q1.start()
 
             if process["q2"] == 1:
                 queues.append(q2)
-                process["q2"] = 0
                 q2.start()
             
             if process["q3"] == 1: 
                 queues.append(q3) 
-                process["q3"] = 0 
                 q3.start()            
 
             for queue in queues:
@@ -556,11 +553,15 @@ def blocked(process, q):
         process["q2"] = 0
         process["q3"] = 0
         return
-
-    with messanger:
-        print("process {} io completed on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
+    # with messanger:
+    #     print(q)
+    # with lock:
     process[q] = 0
     send_processes()
+    with messanger:
+        print("process {} io completed on queue #{} at time: {}".format(process["pid"],q,time.ctime()[11:19]))
+        print(process)
+    
 
 # Processor
 def running(process):
