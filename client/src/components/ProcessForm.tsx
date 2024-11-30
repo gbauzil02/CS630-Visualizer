@@ -13,21 +13,25 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-const formSchema = z.object({
-  size: z.coerce.number().positive().int(),
-  io: z.coerce.number().positive().int().max(3),
-});
-
 type ProcessFormProps = {
   addProcess: (size: number, io: number) => void;
+  maxMemorySize: number;
 };
 
-export default function ProcessForm({ addProcess }: ProcessFormProps) {
+export default function ProcessForm({
+  addProcess,
+  maxMemorySize,
+}: ProcessFormProps) {
+  const formSchema = z.object({
+    size: z.coerce.number().positive().int().max(maxMemorySize),
+    io: z.coerce.number().int().max(3),
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       size: 1,
-      io: 0
+      io: 0,
     },
   });
 
@@ -51,6 +55,7 @@ export default function ProcessForm({ addProcess }: ProcessFormProps) {
                   type="number"
                   placeholder="12"
                   min={1}
+                  max={maxMemorySize}
                 />
               </FormControl>
               <FormDescription>The size of the process in KB.</FormDescription>

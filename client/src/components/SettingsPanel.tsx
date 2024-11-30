@@ -86,6 +86,8 @@ export default function SettingsPanel() {
     },
   });
 
+  const maxMemorySize = form.watch("memorySize");
+
   const { toast } = useToast();
 
   const handleSubmit = form.handleSubmit(
@@ -136,7 +138,10 @@ export default function SettingsPanel() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent>
-                <ProcessForm addProcess={addProcess} />
+                <ProcessForm
+                  addProcess={addProcess}
+                  maxMemorySize={maxMemorySize}
+                />
               </PopoverContent>
             </Popover>
           </div>
