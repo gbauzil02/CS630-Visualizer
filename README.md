@@ -19,7 +19,7 @@ You can check if you have Python installed by running the following command in y
 
 ```bash
 python --version
-python3 --version # for linux
+python3 --version # for Mac/linux
 ```
 
 ## Setup
