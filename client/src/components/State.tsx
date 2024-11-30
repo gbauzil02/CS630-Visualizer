@@ -1,16 +1,10 @@
 import { motion } from "motion/react";
 import type { Process } from "@/components/SettingsPanel";
 
-export type UpdatedProcess = Process & {
-  q1: number;
-  q2: number;
-  q3: number;
-};
-
 type StateProps = {
   name: string;
   className?: string;
-  processes: UpdatedProcess[];
+  processes: Process[];
 };
 
 export default function State({ name, className, processes }: StateProps) {
@@ -33,9 +27,12 @@ export default function State({ name, className, processes }: StateProps) {
           })
           .map((process) => (
             <motion.li
-              key={process.pid}
-              layoutId={`process-${process.pid}`}
+              key={`${name}-${process.pid}`}
               className="p-2 self-center font-bold bg-green-500 text-white rounded-full shadow flex items-center justify-center w-10 h-10"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300 }}
             >
               {process.pid}
             </motion.li>
