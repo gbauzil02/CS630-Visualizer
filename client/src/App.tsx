@@ -1,53 +1,49 @@
 import { Button } from "@/components/ui/button";
-import { Container, Stage, Text } from "@pixi/react";
-import { Circle } from "@/components/Circle";
-import { TextStyle } from "pixi.js";
 import SettingsPanel from "@/components/SettingsPanel";
 import TaskManager from "@/components/TaskManager";
 import { Toaster } from "@/components/ui/toaster";
 import { ProcessContextProvider } from "@/contexts/ProcessContext";
-import { io, Socket } from 'socket.io-client';
-import { useState, useEffect} from "react";
-import HttpCall from "./components/HttpCall";
+import { useState, useEffect } from "react";
+import { socket } from "@/services/socket.ts";
+import Container from "./components/Container";
 
 function App() {
-  const [socketInstance,setSocketInstance] = useState<Socket | null>(null);
-  const [loading,setLoading] = useState(true)
-  const [buttonStatus,setButtonStatus] = useState(false)
-
-  const socket = io("http://localhost:5001", {
-    autoConnect: false
-  });
-
-  const handleClick = () => {
-    if (buttonStatus === false){
-      setButtonStatus(true)
-    }else{
-      setButtonStatus(false)
-    }
-  }
-
-  async function fetchData(){
-    const request = await fetch("http://localhost:5001/http-call");
-    const data = await request.json();
-    console.log(data);
-  }
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
-      socket.on('connect',() => {
-        console.log("Connected to server")
-      });
+    socket.on("connect", () => {
+      console.log("Connected to server");
+    });
 
-      socket.on("test",(data)=>{
-        console.log(data)
-      })
+    socket.on("disconnect", () => {
+      console.log("Disconnected from server");
+    });
 
-      return () => {
-        socket.off('connect');
-      }; 
-  },[])
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.disconnect();
+    };
+  }, []);
 
-  
+  useEffect(() => {
+    if (!socket.connected) {
+      setIsRunning(false);
+    }
+  }, []);
+
+  async function startSimulation() {
+    socket.connect();
+    socket.emit("start");
+    setIsRunning(true);
+  }
+
+  async function stopSimulation() {
+    socket.emit("stop");
+    socket.disconnect();
+    setIsRunning(false);
+  }
+
   return (
     <>
       <main className="mx-auto max-w-7xl space-y-4">
@@ -55,26 +51,19 @@ function App() {
           7 State Process Model Simulation
         </h1>
         <ProcessContextProvider>
-          <div className="flex gap-4">
+          <div className="flex h-full gap-4">
             <div className="w-full flex flex-col gap-4">
-              <Stage>
-                <Container>
-                  <Text
-                    text="Hello World!"
-                    x={150}
-                    y={150}
-                    style={
-                      new TextStyle({
-                        fill: "white",
-                        fontSize: 36,
-                        fontFamily: "Arial",
-                      })
-                    }
-                  />
-                  <Circle />
-                </Container>
-              </Stage>
-              <Button className=" self-end">Run</Button>
+              <Container />
+              {isRunning ? (
+                <Button className=" self-end" onClick={stopSimulation}>
+                  Stop
+                </Button>
+              ) : (
+                <Button className=" self-end" onClick={startSimulation}>
+                  Run
+                </Button>
+              )}
+
               <SettingsPanel />
             </div>
             <TaskManager />

@@ -33,10 +33,12 @@ import { useProcessContext } from "@/contexts/ProcessContext";
 export type Process = {
   pid: string;
   state: string;
-  IOStatus: string;
+  ioStatus: string;
   size: number;
-  hasIO: boolean;
-  numOfEvents?: number;
+  io: number;
+  q1: number;
+  q2: number;
+  q3: number;
 };
 
 const formSchema = z.object({
@@ -47,18 +49,17 @@ const formSchema = z.object({
 export default function SettingsPanel() {
   const { processes, setProcesses } = useProcessContext();
 
-  function addProcess(size: number, hasIO: boolean, numOfEvents?: number) {
+  function addProcess(size: number, io: number) {
     const process: Process = {
       pid: String(processes.length + 1),
       size,
-      hasIO,
-      state: "New",
-      IOStatus: "None",
+      state: "NEW",
+      ioStatus: "None",
+      io,
+      q1: 0,
+      q2: 0,
+      q3: 0,
     };
-
-    if (hasIO) {
-      process.numOfEvents = numOfEvents;
-    }
 
     setProcesses([...processes, process]);
   }
@@ -68,7 +69,7 @@ export default function SettingsPanel() {
     timeSlice: number;
     memorySize: number;
   }) {
-    await fetch("http://localhost:3001/endpoint", {
+    await fetch("http://localhost:5001/load", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -85,6 +86,8 @@ export default function SettingsPanel() {
     },
   });
 
+  const maxMemorySize = form.watch("memorySize");
+
   const { toast } = useToast();
 
   const handleSubmit = form.handleSubmit(
@@ -98,7 +101,6 @@ export default function SettingsPanel() {
         return;
       }
       loadSimulation({ processes, ...values });
-      console.log({ processes, ...values });
       toast({
         title: "Success",
         description: "Simulation loaded successfully!",
@@ -124,10 +126,8 @@ export default function SettingsPanel() {
         <section className="space-y-2">
           <h2 className="font-semibold text-xl uppercase">Process Settings</h2>
           <div className="flex gap-2">
-            <Button onClick={() => addProcess(12, false)}>
-              Add Basic Process
-            </Button>
-            <Button onClick={() => addProcess(12, true, 2)}>
+            <Button onClick={() => addProcess(12, 0)}>Add Basic Process</Button>
+            <Button onClick={() => addProcess(12, 2)}>
               Add Process with I/O
             </Button>
             <Popover>
@@ -138,7 +138,10 @@ export default function SettingsPanel() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent>
-                <ProcessForm addProcess={addProcess} />
+                <ProcessForm
+                  addProcess={addProcess}
+                  maxMemorySize={maxMemorySize}
+                />
               </PopoverContent>
             </Popover>
           </div>
