@@ -24,7 +24,7 @@ start cmd /k "cd /d %cd% && call venv\Scripts\activate && python app.py"
 echo Python API is running in a new window.
 
 REM Deactivate virtual environment and return to the original directory
-deactivate
+call deactivate
 cd ..
 
 REM Set up React Frontend
@@ -33,11 +33,11 @@ echo Setting up React Frontend...
 cd client
 
 REM Install Node.js dependencies
-npm install
+call npm install
 echo React dependencies installed.
 
 REM Build the React frontend
-npm run build
+call npm run build
 echo React frontend built.
 
 REM Run React frontend in a new Command Prompt window
