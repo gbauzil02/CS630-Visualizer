@@ -14,7 +14,6 @@ export default function Container() {
     "RUNNING",
     "EXIT",
     "BLOCK_SUS",
-    "BLOCKED",
     "BLOCKED_1",
     "BLOCKED_2",
     "BLOCKED_3",
@@ -22,7 +21,6 @@ export default function Container() {
 
   useEffect(() => {
     socket.on("processes", (data) => {
-      console.log(data);
       setProcesses(data);
     });
 
