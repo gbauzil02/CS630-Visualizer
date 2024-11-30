@@ -7,6 +7,13 @@ This project is a visualization of the 7 state process model. The project consis
 In order to use this project, you must have Node.js installed on your machine. You can download Node.js from the following link: https://nodejs.org/en/download/
 You can check if you have Node.js installed by running the following command in your terminal: `node -v`
 
+To install Node on Mac, please visit https://brew.sh/ to install Homebrew. To add homebrew to your path and install node run the commands:
+
+``` bash
+export PATH=$PATH:/opt/homebrew/bin
+brew install npm
+```
+
 You also need to have Python installed on your machine. You can download Python from the following link: https://www.python.org/downloads/
 You can check if you have Python installed by running the following command in your terminal:
 
