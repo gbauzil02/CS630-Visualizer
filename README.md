@@ -9,7 +9,7 @@ You can check if you have Node.js installed by running the following command in 
 
 To install Node on Mac, please visit https://brew.sh/ to install Homebrew. To add homebrew to your path and install node run the commands:
 
-``` bash
+```bash
 export PATH=$PATH:/opt/homebrew/bin
 brew install npm
 ```
@@ -24,46 +24,53 @@ python3 --version # for Mac/linux
 
 ## Setup
 
+### Client
+
+- Enter the client directory: `cd client`
+- Install the required packages:
+
 ```bash
 npm install
 ```
+
+- Build the project:
 
 ```bash
 npm run build
 ```
 
-```bash
-npm start
-```
-
-**Install requirements.txt**
+- Start the frontend server:
 
 ```bash
-cd backend
-pip install -r backend/requirements.txt
+npm run preview
 ```
 
-**Setup Environment**
+The frontend server should now be running on `http://localhost:4173/`
+
+The server will be running in the terminal window so you will need to open a new terminal window to run the backend.
+
+### Backend
+
+Enter the backend directory: `cd backend`
+
 This project consists of a Python backend using the Flask framework In order to use this framework with the front end, you must use a virtual environment. **NOTE**: This step is not mandatory for Mac/Linux users.
 
-To create virtual environment: `python3 -m venv venv`
+- To create virtual environment: `python3 -m venv venv`
 
 To activate virtual environment:
 
-**Windows**: **venv\Scripts\activate**
+**Windows**: `venv\Scripts\activate`
 
 **Linux/MacOS**: `source venv/bin/activate`
 
-***
-**Starting Flask Backend**
-Linux/MacOS:
+- Install the required packages:
+
 ```bash
-cd backend
+pip install -r requirements.txt
 ```
+
+- Start the backend server:
 
 ```bash
 python3 app.py
 ```
-
-
-
