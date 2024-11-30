@@ -6,12 +6,12 @@ export default function TaskManager() {
   const { processes } = useProcessContext();
 
   return (
-    <Card className="grow-1">
+    <Card>
       <CardHeader>
         <CardTitle>Task Manager</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex gap-2 flex-col overflow-y-auto">
+      <CardContent className="max-h-[969px] overflow-y-auto">
+        <div className="flex gap-2 flex-col">
           {processes.map((process) => (
             <ProcessCard key={process.pid} process={process} />
           ))}
