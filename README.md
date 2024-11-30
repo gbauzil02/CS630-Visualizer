@@ -47,7 +47,7 @@ To activate virtual environment:
 
 **Linux/MacOS**: `source venv/bin/activate`
 
-
+***
 **Starting Flask Backend**
 Linux/MacOS:
 ```bash
