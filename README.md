@@ -37,7 +37,7 @@ pip install -r backend/requirements.txt
 ```
 
 **Setup Environment**
-This project consists of a Python backend using the Flask framework In order to use this framework with the front end, you must use a virtual environment.
+This project consists of a Python backend using the Flask framework In order to use this framework with the front end, you must use a virtual environment. **NOTE**: This step is not mandatory for Mac/Linux users.
 
 To create virtual environment: `python3 -m venv venv`
 
