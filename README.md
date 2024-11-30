@@ -46,3 +46,16 @@ To activate virtual environment:
 **Windows**: **venv\Scripts\activate**
 
 **Linux/MacOS**: `source venv/bin/activate`
+
+
+**Backend Setup**
+```bash
+cd backend
+```
+
+```bash
+python3 app.py
+```
+
+
+
